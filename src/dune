@@ -1,0 +1,6 @@
+(library
+ (public_name float_array)
+ (name float_array)
+ (libraries bin_prot core)
+ (preprocess
+  (pps ppx_jane)))
