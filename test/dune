@@ -1,0 +1,6 @@
+(library
+ (name float_array_test)
+ (libraries base float_array core.base_for_tests sexplib
+   expect_test_helpers_core stdio)
+ (preprocess
+  (pps ppx_jane)))
