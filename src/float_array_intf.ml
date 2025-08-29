@@ -478,6 +478,24 @@ module type Float_array = sig
 
   include S with type t = floatarray and type float_elt := float
 
+  module Via_floatarray_optimization : sig
+    (* We don't expose [of_array_id] and [to_array_id] in [Float_array.S] because [S.t] is
+       abstract, and so the ["%identity"] version is not necessarily safe for all modules
+       that otherwise implement this interface.
+
+       Here, ["%identity"] is safe since [float array] and [floatarray] have the same
+       representation in Flambda.
+
+       These functions will also become incorrect when we delete the floatarray optimization
+       (although they may be still be correct for converting to/from [float# array])
+    *)
+    [%%template:
+    [@@@mode.default l = (global, local)]
+
+    val of_array_id : float array -> t
+    val to_array_id : t -> float array]
+  end
+
   module Permissioned :
     Permissioned with type permissionless := t and type float_elt := float
 

@@ -982,6 +982,34 @@ end = struct
   ;;
 end
 
+module Via_floatarray_optimization = struct
+  [@@@ocaml.flambda_o3]
+
+  external of_array_id : (float array[@local_opt]) -> (t[@local_opt]) = "%identity"
+  external to_array_id : (t[@local_opt]) -> (float array[@local_opt]) = "%identity"
+
+  [%%template
+  [@@@mode.default l = (local, global)]
+
+  let of_array_id arr =
+    if Config.flat_float_array
+    then of_array_id arr [@exclave_if_local l]
+    else
+      failwith
+        "[Float_array.Via_floatarray_optimization.of_array_id] requires the float array \
+         optimization"
+  ;;
+
+  let to_array_id arr =
+    if Config.flat_float_array
+    then to_array_id arr [@exclave_if_local l]
+    else
+      failwith
+        "[Float_array.Via_floatarray_optimization.to_array_id] requires the float array \
+         optimization"
+  ;;]
+end
+
 module type S = Float_array_intf.S
 module type Permissioned = Float_array_intf.Permissioned
 

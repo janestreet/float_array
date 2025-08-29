@@ -540,3 +540,12 @@ let%test_unit "create_local (unsafe accesses)" =
   in
   test ~len:0
 ;;
+
+let%test "{to_of}_array_id" =
+  let arr' = [| 1.; 2.; 3.; 4. |] in
+  let t = Via_floatarray_optimization.of_array_id arr' in
+  let r1 = for_alli t ~f:(fun i x -> [%compare.equal: float] x (Array.get arr' i)) in
+  let arr = Via_floatarray_optimization.to_array_id t in
+  let r2 = for_alli t ~f:(fun i x -> [%compare.equal: float] x (Array.get arr i)) in
+  r1 && r2
+;;
