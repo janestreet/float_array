@@ -104,7 +104,7 @@ module T = struct
     | List [] -> uncontended_empty ()
     | List (h :: t) ->
       let len = List.length t + 1 in
-      let res = make len (float_of_sexp h) in
+      let res = make len (elt_of_sexp h) in
       let rec loop i = function
         | [] -> res
         | h :: t ->
@@ -477,8 +477,9 @@ module T = struct
     !acc, result
   ;;
 
-  let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
   let fold_until t ~init ~f ~finish = Container.fold_until ~fold ~init ~f t ~finish
+  let fold_result t ~init ~f = Container.fold_result ~fold_until ~init ~f t
+  let iter_until t ~f ~finish = Container.iter_until ~fold_until ~f t ~finish
   let count t ~f = Container.count ~fold t ~f
   let sum m t ~f = Container.sum ~fold m t ~f
   let min_elt t ~compare = Container.min_elt ~fold t ~compare
@@ -968,7 +969,7 @@ module T = struct
         -> len:int
         -> unit
         @@ portable
-        = "core_array_unsafe_float_blit"
+        = "base_array_unsafe_float_blit"
       [@@noalloc]
     end)
 
@@ -999,6 +1000,43 @@ end = struct
   let to_sequence_immutable : [> Core.immutable ] t -> float Sequence.t =
     to_sequence_mutable
   ;;
+end
+
+module Via_floatarray_optimization = struct
+  [@@@ocaml.flambda_o3]
+
+  external of_array_id
+    :  (float array[@local_opt])
+    -> (t[@local_opt])
+    @@ portable
+    = "%identity"
+
+  external to_array_id
+    :  (t[@local_opt])
+    -> (float array[@local_opt])
+    @@ portable
+    = "%identity"
+
+  [%%template
+  [@@@mode.default l = (local, global)]
+
+  let of_array_id (arr @ l) =
+    if Config.flat_float_array
+    then of_array_id arr [@exclave_if_local l]
+    else
+      failwith
+        "[Float_array.Via_floatarray_optimization.of_array_id] requires the float array \
+         optimization"
+  ;;
+
+  let to_array_id (arr @ l) =
+    if Config.flat_float_array
+    then to_array_id arr [@exclave_if_local l]
+    else
+      failwith
+        "[Float_array.Via_floatarray_optimization.to_array_id] requires the float array \
+         optimization"
+  ;;]
 end
 
 module type S = Float_array_intf.S

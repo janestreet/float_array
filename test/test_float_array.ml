@@ -540,3 +540,23 @@ let%test_unit "create_local (unsafe accesses)" =
   in
   test ~len:0
 ;;
+
+let%test "{to_of}_array_id" =
+  let arr' = [| 1.; 2.; 3.; 4. |] in
+  let t = Via_floatarray_optimization.of_array_id arr' in
+  let r1 = for_alli t ~f:(fun i x -> [%compare.equal: float] x (Array.get arr' i)) in
+  let arr = Via_floatarray_optimization.to_array_id t in
+  let r2 = for_alli t ~f:(fun i x -> [%compare.equal: float] x (Array.get arr i)) in
+  r1 && r2
+;;
+
+let%test_unit "custom sexp round trips" =
+  let sexp_of_elt x = Sexp.List [ Float.sexp_of_t x ] in
+  let elt_of_sexp = function
+    | Sexp.List [ x ] -> Float.t_of_sexp x
+    | _ -> failwith "bad sexp"
+  in
+  let arr = of_list [ 0.; 2.; 4.; 6. ] in
+  let roundtripped = custom_sexp_of_t sexp_of_elt arr |> custom_t_of_sexp elt_of_sexp in
+  [%test_result: t] roundtripped ~expect:arr
+;;
