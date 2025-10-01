@@ -85,7 +85,7 @@ module T = struct
     | List [] -> uncontended_empty ()
     | List (h :: t) ->
       let len = List.length t + 1 in
-      let res = make len (float_of_sexp h) in
+      let res = make len (elt_of_sexp h) in
       let rec loop i = function
         | [] -> res
         | h :: t ->
@@ -949,7 +949,7 @@ module T = struct
         -> dst_pos:int
         -> len:int
         -> unit
-        = "core_array_unsafe_float_blit"
+        = "base_array_unsafe_float_blit"
       [@@noalloc]
     end)
 
