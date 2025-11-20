@@ -207,16 +207,15 @@ module T = struct
     (* http://en.wikipedia.org/wiki/Insertion_sort *)
     module Insertion_sort : Sort_portable = struct
       let sort arr ~compare ~left ~right =
-        (* loop invariant:
-           [arr] is sorted from [left] to [pos - 1], inclusive *)
+        (* loop invariant: [arr] is sorted from [left] to [pos - 1], inclusive *)
         for pos = left + 1 to right do
           (* loop invariants:
-             1.  the subarray arr[left .. i-1] is sorted
-             2.  the subarray arr[i+1 .. pos] is sorted and contains only elements > v
-             3.  arr[i] may be thought of as containing v
+             1. the subarray arr[left .. i-1] is sorted
+             2. the subarray arr[i+1 .. pos] is sorted and contains only elements > v
+             3. arr[i] may be thought of as containing v
 
-             Note that this does not allocate a closure, but is left in the for
-             loop for the readability of the documentation. *)
+             Note that this does not allocate a closure, but is left in the for loop for
+             the readability of the documentation. *)
           let rec loop arr ~left ~compare i v =
             let i_next = i - 1 in
             if i_next >= left && compare (get arr i_next) v > 0
@@ -234,8 +233,7 @@ module T = struct
 
     (* http://en.wikipedia.org/wiki/Heapsort *)
     module Heap_sort : Sort_portable = struct
-      (* loop invariant:
-         root's children are both either roots of max-heaps or > right *)
+      (* loop invariant: root's children are both either roots of max-heaps or > right *)
       let rec heapify arr ~compare root ~left ~right =
         let relative_root = root - left in
         let left_child = (2 * relative_root) + left + 1 in
@@ -257,7 +255,7 @@ module T = struct
       ;;
 
       let build_heap arr ~compare ~left ~right =
-        (* Elements in the second half of the array are already heaps of size 1.  We move
+        (* Elements in the second half of the array are already heaps of size 1. We move
            through the first half of the array from back to front examining the element at
            hand, and the left and right children, fixing the heap property as we go. *)
         for i = (left + right) / 2 downto left do
@@ -268,9 +266,9 @@ module T = struct
       let sort arr ~compare ~left ~right =
         build_heap arr ~compare ~left ~right;
         (* loop invariants:
-           1.  the subarray arr[left ... i] is a max-heap H
-           2.  the subarray arr[i+1 ... right] is sorted (call it S)
-           3.  every element of H is less than every element of S *)
+           1. the subarray arr[left ... i] is a max-heap H
+           2. the subarray arr[i+1 ... right] is sorted (call it S)
+           3. every element of H is less than every element of S *)
         for i = right downto left + 1 do
           swap arr left i;
           heapify arr ~compare left ~left ~right:(i - 1)
@@ -308,7 +306,7 @@ module T = struct
             4-----o--------o--o--|-----o--4
                   |              |     |
             5-----o--------------o-----o--5
-          v} *)
+           v} *)
         compare_and_swap m1 m2;
         compare_and_swap m4 m5;
         compare_and_swap m1 m3;
@@ -321,13 +319,11 @@ module T = struct
       ;;
 
       (* choose pivots for the array by sorting 5 elements and examining the center three
-         elements.  The goal is to choose two pivots that will either:
-         - break the range up into 3 even partitions
-           or
+         elements. The goal is to choose two pivots that will either:
+         - break the range up into 3 even partitions or
          - eliminate a commonly appearing element by sorting it into the center partition
-           by itself
-           To this end we look at the center 3 elements of the 5 and return pairs of equal
-           elements or the widest range *)
+           by itself To this end we look at the center 3 elements of the 5 and return
+           pairs of equal elements or the widest range *)
       let choose_pivots arr ~compare ~left ~right =
         let sixth = (right - left) / 6 in
         let m1 = left + sixth in
@@ -348,7 +344,7 @@ module T = struct
 
       let dual_pivot_partition arr ~compare ~left ~right =
         let pivot1, pivot2, pivots_equal = choose_pivots arr ~compare ~left ~right in
-        (* loop invariants:
+        (*=loop invariants:
            1.  left <= l < r <= right
            2.  l <= p <= r
            3.  l <= x < p     implies arr[x] >= pivot1
@@ -363,7 +359,7 @@ module T = struct
             cont (l + 1) (p + 1) r)
           else if compare pv pivot2 > 0
           then (
-            (* loop invariants:  same as those of the outer loop *)
+            (* loop invariants: same as those of the outer loop *)
             let rec scan_backwards r =
               if r > p && compare (get arr r) pivot2 > 0
               then scan_backwards (r - 1)
@@ -381,7 +377,7 @@ module T = struct
       let rec intro_sort arr ~max_depth ~compare ~left ~right =
         let len = right - left + 1 in
         (* This takes care of some edge cases, such as left > right or very short arrays,
-           since Insertion_sort.sort handles these cases properly.  Thus we don't need to
+           since Insertion_sort.sort handles these cases properly. Thus we don't need to
            make sure that left and right are valid in recursive calls. *)
         if len <= 32
         then Insertion_sort.sort arr ~compare ~left ~right
@@ -893,8 +889,8 @@ module T = struct
   let partition_tf t ~f = partitioni_tf t ~f:(fun _i x -> f x)
   let last t = get t (length t - 1)
 
-  (* Convert to a sequence but does not attempt to protect against modification
-     in the array. *)
+  (* Convert to a sequence but does not attempt to protect against modification in the
+     array. *)
   let to_sequence_mutable t =
     Sequence.unfold_step ~init:0 ~f:(fun i ->
       if i >= length t
@@ -956,8 +952,7 @@ module T = struct
         if len = 0
         then uncontended_empty ()
         else
-          (* The 0.0 value will never be seen in the result.  See blit.ml in
-             [Base]. *)
+          (* The 0.0 value will never be seen in the result. See blit.ml in [Base]. *)
           create ~len 0.0
       ;;
 
