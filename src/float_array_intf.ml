@@ -486,8 +486,9 @@ module type Float_array = sig
        Here, ["%identity"] is safe since [float array] and [floatarray] have the same
        representation in Flambda.
 
-       These functions will also become incorrect when we delete the floatarray optimization
-       (although they may be still be correct for converting to/from [float# array])
+       These functions will also become incorrect when we delete the floatarray
+       optimization (although they may be still be correct for converting to/from
+       [float# array])
     *)
     [%%template:
     [@@@mode.default l = (global, local)]
@@ -503,7 +504,7 @@ module type Float_array = sig
 
   (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
-    https://opensource.janestreet.com/standards/#private-submodules *)
+      https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     module Sort : sig
       module type Sort = sig
