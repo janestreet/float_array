@@ -1016,7 +1016,7 @@ module Via_floatarray_optimization = struct
   [@@@mode.default l = (local, global)]
 
   let of_array_id (arr @ l) =
-    if Config.flat_float_array
+    if Float_array_config.flat_float_array
     then of_array_id arr [@exclave_if_local l]
     else
       failwith
@@ -1025,7 +1025,7 @@ module Via_floatarray_optimization = struct
   ;;
 
   let to_array_id (arr @ l) =
-    if Config.flat_float_array
+    if Float_array_config.flat_float_array
     then to_array_id arr [@exclave_if_local l]
     else
       failwith

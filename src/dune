@@ -1,6 +1,13 @@
+(rule
+ (targets float_array_config.ml)
+ (deps)
+ (action
+  (bash
+    "VAL=$(%{ocamlc} -config | grep flat_float_array | sed 's/.*: //'); echo \"let flat_float_array = $VAL\" > float_array_config.ml")))
+
 (library
  (public_name float_array)
  (name float_array)
- (libraries bin_prot core compiler-libs.common)
+ (libraries bin_prot core)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))
