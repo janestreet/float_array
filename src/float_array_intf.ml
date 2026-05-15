@@ -8,7 +8,10 @@ open Core
 
 module type S = sig
   type float_elt
-  type t [@@deriving bin_io ~localize, compare ~localize, globalize, sexp]
+
+  type t
+  [@@deriving
+    bin_io ~localize, compare ~localize, globalize, sexp ~stackify, sexp_grammar]
 
   val custom_sexp_of_t : (float_elt -> Sexp.t) -> t -> Sexp.t
   val custom_t_of_sexp : (Sexp.t -> float_elt) -> Sexp.t -> t
