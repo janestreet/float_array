@@ -550,6 +550,47 @@ let%test "{to_of}_array_id" =
   r1 && r2
 ;;
 
+let%expect_test "sexp round-trip" =
+  let test l =
+    let t = of_list l in
+    let sexp = sexp_of_t t in
+    print_s sexp;
+    let t' = t_of_sexp sexp in
+    [%test_result: t] t' ~expect:t
+  in
+  test [];
+  [%expect {| () |}];
+  test [ 1. ];
+  [%expect {| (1) |}];
+  test [ 1.; 2.5; 3. ];
+  [%expect {| (1 2.5 3) |}]
+;;
+
+let%expect_test "sexp_of with stack allocation" =
+  let test l =
+    let t = of_list l in
+    let sexp_reference = [%sexp (l : float list)] in
+    let sexp = [%sexp (t : t)] [@alloc stack] in
+    Expect_test_helpers_core.require ((Sexp.equal [@mode local]) sexp_reference sexp);
+    print_s sexp;
+    ()
+  in
+  test [];
+  [%expect {| () |}];
+  test [ 1. ];
+  [%expect {| (1) |}];
+  test [ 1.; 2.5; 3. ];
+  [%expect {| (1 2.5 3) |}];
+  test (List.init 10_000 ~f:(fun i -> Float.of_int i *. 12345.6789));
+  let _output_too_long : string = [%expect.output] in
+  ()
+;;
+
+let%expect_test "t_of_sexp error on atom" =
+  require_does_raise (fun () -> t_of_sexp (Sexp.Atom "bad"));
+  [%expect {| (Of_sexp_error "array_of_sexp: list needed" (invalid_sexp bad)) |}]
+;;
+
 let%test_unit "custom sexp round trips" =
   let sexp_of_elt x = Sexp.List [ Float.sexp_of_t x ] in
   let elt_of_sexp = function

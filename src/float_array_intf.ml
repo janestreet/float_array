@@ -8,7 +8,10 @@ open Core
 
 module type S = sig @@ portable
   type float_elt
-  type t [@@deriving bin_io ~localize, compare ~localize, globalize, sexp]
+
+  type t
+  [@@deriving
+    bin_io ~localize, compare ~localize, globalize, sexp ~stackify, sexp_grammar]
 
   val custom_sexp_of_t : (float_elt -> Sexp.t) -> t -> Sexp.t
   val custom_t_of_sexp : (Sexp.t -> float_elt) -> Sexp.t -> t
@@ -359,7 +362,7 @@ module type Permissioned = sig
   val make_matrix : dimx:int -> dimy:int -> float_elt -> [< _ perms ] t Array.t
   val append : [> read ] t -> [> read ] t -> [< _ perms ] t
   val concat : [> read ] t list -> [< _ perms ] t
-  val copy : [> read ] t -> [< _ perms ] t
+  val copy : local_ [> read ] t -> [< _ perms ] t
   val fill : [> write ] t -> pos:int -> len:int -> float_elt -> unit
   val of_list : float_elt list -> [< _ perms ] t
   val map : [> read ] t -> f:(float_elt -> float_elt) -> [< _ perms ] t
