@@ -16,6 +16,19 @@ module%test [@tags "no-wasm"] Binary_searchable = Test_binary_searchable.Test (s
     end
   end)
 
+module%test [@tags "64-bits-only"] Binary_searchable = Test_binary_searchable.Test (struct
+    include Float_array
+
+    type elt = float
+
+    module For_test = struct
+      let of_array = of_array
+      let big = 420_000.
+      let small = -420_000.
+      let compare = Float.compare
+    end
+  end)
+
 module%test Blit =
   Test_blit.Test
     (struct
@@ -56,13 +69,23 @@ module%test Sort = struct
 
     let all_perms = permutations [ 1.; 2.; 3.; 4.; 5. ]
     let%test _ = List.length all_perms = 120
-    let%test _ = not (List.contains_dup ~compare:[%compare: float list] all_perms)
+
+    let%test _ =
+      not (List.contains_dup ~compare:([%compare: float list] [@mode local]) all_perms)
+    ;;
 
     let%test _ =
       List.for_all all_perms ~f:(fun l ->
         let arr = Float_array.of_list l in
-        Intro_sort.five_element_sort arr ~compare:[%compare: float] 0 1 2 3 4;
-        [%compare.equal: t] arr (of_list [ 1.; 2.; 3.; 4.; 5. ]))
+        Intro_sort.five_element_sort
+          arr
+          ~compare:([%compare: float] [@mode local])
+          0
+          1
+          2
+          3
+          4;
+        ([%compare.equal: t] [@mode local]) arr (of_list [ 1.; 2.; 3.; 4.; 5. ]))
     ;;
   end
 
@@ -76,7 +99,11 @@ module%test Sort = struct
     ;;
 
     let assert_sorted arr =
-      M.sort arr ~left:0 ~right:(Float_array.length arr - 1) ~compare:[%compare: float];
+      M.sort
+        arr
+        ~left:0
+        ~right:(Float_array.length arr - 1)
+        ~compare:([%compare: float] [@mode local]);
       let len = Float_array.length arr in
       let rec loop i prev =
         if i = len
@@ -101,16 +128,27 @@ module%test Sort = struct
   module%test _ = Test (Intro_sort)
 end
 
-let%test _ = is_sorted empty ~compare:[%compare: float]
-let%test _ = is_sorted (of_list [ 0. ]) ~compare:[%compare: float]
-let%test _ = is_sorted (of_list [ 0.; 1.; 2.; 2.; 4. ]) ~compare:[%compare: float]
-let%test _ = not (is_sorted (of_list [ 0.; 1.; 2.; 3.; 2. ]) ~compare:[%compare: float])
+let%test _ = is_sorted empty ~compare:([%compare: float] [@mode local])
+let%test _ = is_sorted (of_list [ 0. ]) ~compare:([%compare: float] [@mode local])
+
+let%test _ =
+  is_sorted (of_list [ 0.; 1.; 2.; 2.; 4. ]) ~compare:([%compare: float] [@mode local])
+;;
+
+let%test _ =
+  not
+    (is_sorted
+       (of_list [ 0.; 1.; 2.; 3.; 2. ])
+       ~compare:([%compare: float] [@mode local]))
+;;
 
 let%test_unit _ =
   List.iter
     ~f:(fun (t, expect) ->
       assert (
-        Bool.equal expect (is_sorted_strictly (of_list t) ~compare:[%compare: float])))
+        Bool.equal
+          expect
+          (is_sorted_strictly (of_list t) ~compare:([%compare: float] [@mode local]))))
     [ [], true
     ; [ 1. ], true
     ; [ 1.; 2. ], true
@@ -154,7 +192,7 @@ let%test_unit _ =
   for i = 0 to 5 do
     let l1 = List.init i ~f:Float.of_int in
     let l2 = List.rev (to_list (of_list_rev l1)) in
-    assert ([%compare.equal: float list] l1 l2)
+    assert (([%compare.equal: float list] [@mode local]) l1 l2)
   done
 ;;
 
@@ -486,26 +524,10 @@ let%test_unit _ =
     ~expect:(0., empty)
 ;;
 
-module%test [@name "create_local length check"] _ = struct
-  (* wasm/javascript/native have different exception messages *)
-
-  let run () = require_does_raise (fun () -> ignore (create_local ~len:(-1) 0.0 : t))
-
-  let%expect_test (_ [@tags "no-js"]) =
-    run ();
-    [%expect {| (Invalid_argument "Float_array.create_local ~len:-1: invalid length") |}]
-  ;;
-
-  let%expect_test ("create_local length check (javascript)" [@tags "js-only", "no-wasm"]) =
-    run ();
-    [%expect {| (Invalid_argument "index out of bounds") |}]
-  ;;
-
-  let%expect_test ("create_local length check (wasm)" [@tags "wasm-only"]) =
-    run ();
-    [%expect {| (Invalid_argument Array.make) |}]
-  ;;
-end
+let%expect_test "create_local length check" =
+  require_does_raise (fun () -> ignore (create_local ~len:(-1) 0.0 : t));
+  [%expect {| (Invalid_argument "Float_array.create_local ~len:-1: invalid length") |}]
+;;
 
 let%test_unit "create_local (safe accesses)" =
   let rec test ~len =
@@ -544,9 +566,14 @@ let%test_unit "create_local (unsafe accesses)" =
 let%test "{to_of}_array_id" =
   let arr' = [| 1.; 2.; 3.; 4. |] in
   let t = Via_floatarray_optimization.of_array_id arr' in
-  let r1 = for_alli t ~f:(fun i x -> [%compare.equal: float] x (Array.get arr' i)) in
+  let r1 =
+    for_alli t ~f:(fun i x ->
+      ([%compare.equal: float] [@mode local]) x (Array.get arr' i))
+  in
   let arr = Via_floatarray_optimization.to_array_id t in
-  let r2 = for_alli t ~f:(fun i x -> [%compare.equal: float] x (Array.get arr i)) in
+  let r2 =
+    for_alli t ~f:(fun i x -> ([%compare.equal: float] [@mode local]) x (Array.get arr i))
+  in
   r1 && r2
 ;;
 

@@ -19,7 +19,7 @@ module type S = sig @@ portable
   include Binary_searchable.S with type t := t with type elt := float_elt
   include Container.S0 with type t := t with type elt := float_elt
 
-  val length : local_ t -> int
+  val length : t @ local -> int
 
   (** The empty array. *)
   val empty : t
@@ -36,25 +36,25 @@ module type S = sig @@ portable
 
       Raise [Invalid_argument "index out of bounds"] if [n] is outside the range 0 to
       [(Float_array.length a - 1)]. *)
-  val get : local_ t -> int -> float_elt
+  val get : t @ local -> int -> float_elt
 
   (** [Float_array.set a n x] modifies array [a] in place, replacing element number [n]
       with [x].
 
       Raise [Invalid_argument "index out of bounds"] if [n] is outside the range 0 to
       [Float_array.length a - 1]. *)
-  external set : local_ t -> int -> local_ float_elt -> unit = "%floatarray_safe_set"
+  external set : t @ local -> int -> float_elt @ local -> unit = "%floatarray_safe_set"
 
   (** Unsafe version of [get]. Can cause arbitrary behavior when used for an out-of-bounds
       array access. *)
-  val unsafe_get : local_ t -> int -> float_elt
+  val unsafe_get : t @ local -> int -> float_elt
 
   (** Unsafe version of [set]. Can cause arbitrary behavior when used for an out-of-bounds
       array access. *)
   external unsafe_set
-    :  local_ t
+    :  t @ local
     -> int
-    -> local_ float_elt
+    -> float_elt @ local
     -> unit
     = "%floatarray_unsafe_set"
 
@@ -64,7 +64,7 @@ module type S = sig @@ portable
 
   (** [create_local ~len x] is like [create]. It allocates the array on the local stack.
       The array's elements are still global. *)
-  val create_local : len:int -> float_elt -> local_ t
+  val create_local : len:int -> float_elt -> t @ local
 
   (** [init n ~f] creates an array of length [n] where the [i]th element (starting at
       zero) is initialized with [f i]. *)
@@ -87,7 +87,7 @@ module type S = sig @@ portable
 
   (** [Float_array.copy a] returns a copy of [a], that is, a fresh array containing the
       same elements as [a]. *)
-  val copy : local_ t -> t
+  val copy : t @ local -> t
 
   (** [Float_array.fill a ofs len x] modifies the array [a] in place, storing [x] in
       elements number [ofs] to [ofs + len - 1].
@@ -298,7 +298,9 @@ module type S = sig @@ portable
   val sorted_copy : t -> compare:(float_elt -> float_elt -> int) -> t
 
   val last : t -> float_elt
-  val equal : (float_elt -> float_elt -> bool) -> t -> t -> bool
+
+  val%template equal : (float_elt @ m -> float_elt @ m -> bool) -> t @ m -> t @ m -> bool
+  [@@mode m = (global, local)]
 
   (** The input array is copied internally so that future modifications of it do not
       change the sequence. *)
@@ -314,8 +316,11 @@ module type Permissioned = sig
   type permissionless
   type -'perms t [@@deriving bin_io ~localize, compare ~localize, globalize, sexp]
 
-  val of_array_id : permissionless -> [< read_write ] t [@@zero_alloc]
-  val to_array_id : [> read_write ] t -> permissionless [@@zero_alloc]
+  val%template of_array_id : permissionless @ l -> [< read_write ] t @ l
+  [@@mode l = (global, local)] [@@zero_alloc]
+
+  val%template to_array_id : [> read_write ] t @ l -> permissionless @ l
+  [@@mode l = (global, local)] [@@zero_alloc]
 
   (** [to_sequence_immutable t] converts [t] to a sequence. Unlike [to_sequence],
       [to_sequence_immutable] does not need to copy [t] since it is immutable. *)
@@ -334,26 +339,26 @@ module type Permissioned = sig
   (** These functions are in [Container.S1_permissions], but they are re-exposed here so
       that their types can be changed to make them more permissive (see comment above). *)
 
-  val length : local_ _ t -> int
+  val length : _ t @ local -> int
   val is_empty : _ t -> bool
 
   (** counterparts of regular array functions above *)
 
-  val get : local_ [> read ] t -> int -> float_elt
+  val get : [> read ] t @ local -> int -> float_elt
 
   external set
-    :  local_ [> write ] t
+    :  [> write ] t @ local
     -> int
-    -> local_ float
+    -> float @ local
     -> unit
     = "%floatarray_safe_set"
 
-  val unsafe_get : local_ [> read ] t -> int -> float_elt
+  val unsafe_get : [> read ] t @ local -> int -> float_elt
 
   external unsafe_set
-    :  local_ [> write ] t
+    :  [> write ] t @ local
     -> int
-    -> local_ float
+    -> float @ local
     -> unit
     = "%floatarray_unsafe_set"
 
@@ -362,7 +367,7 @@ module type Permissioned = sig
   val make_matrix : dimx:int -> dimy:int -> float_elt -> [< _ perms ] t Array.t
   val append : [> read ] t -> [> read ] t -> [< _ perms ] t
   val concat : [> read ] t list -> [< _ perms ] t
-  val copy : local_ [> read ] t -> [< _ perms ] t
+  val copy : [> read ] t @ local -> [< _ perms ] t
   val fill : [> write ] t -> pos:int -> len:int -> float_elt -> unit
   val of_list : float_elt list -> [< _ perms ] t
   val map : [> read ] t -> f:(float_elt -> float_elt) -> [< _ perms ] t
@@ -489,7 +494,14 @@ module type Permissioned = sig
     -> [< _ perms ] t
 
   val last : [> read ] t -> float_elt
-  val equal : (float_elt -> float_elt -> bool) -> [> read ] t -> [> read ] t -> bool
+
+  val%template equal
+    :  (float_elt @ m -> float_elt @ m -> bool)
+    -> [> read ] t @ m
+    -> [> read ] t @ m
+    -> bool
+  [@@mode m = (global, local)]
+
   val to_sequence : [> read ] t -> float_elt Sequence.t
   val to_sequence_mutable : [> read ] t -> float_elt Sequence.t
 end

@@ -6,29 +6,29 @@ module T = struct
 
     (* Copies of some functions with local annotations *)
 
-    external length : local_ t -> int @@ portable = "%floatarray_length"
-    external get : local_ t -> int -> float @@ portable = "%floatarray_safe_get"
-    external unsafe_get : local_ t -> int -> float @@ portable = "%floatarray_unsafe_get"
+    external length : t @ local -> int @@ portable = "%floatarray_length"
+    external get : t @ local -> int -> float @@ portable = "%floatarray_safe_get"
+    external unsafe_get : t @ local -> int -> float @@ portable = "%floatarray_unsafe_get"
 
     external set
-      :  local_ t
+      :  t @ local
       -> int
-      -> local_ float
+      -> float @ local
       -> unit
       @@ portable
       = "%floatarray_safe_set"
 
     external unsafe_set
-      :  local_ t
+      :  t @ local
       -> int
-      -> local_ float
+      -> float @ local
       -> unit
       @@ portable
       = "%floatarray_unsafe_set"
 
     external create_local_uninitialized
       :  int
-      -> local_ t
+      -> t @ local
       @@ portable
       = "caml_floatarray_create_local"
 
@@ -73,14 +73,14 @@ module T = struct
     Portability_hacks.magic_uncontended__promise_deeply_immutable empty
   ;;
 
-  let%template[@mode local] compare a b =
+  let compare_internal a b =
     (* Adapted from base/src/ppx_compare_lib.ml *)
     if phys_equal a b
     then 0
     else (
       let len_a = length a in
       let len_b = length b in
-      let ret = compare len_a len_b in
+      let ret = Int.compare len_a len_b in
       if ret <> 0
       then ret
       else (
@@ -96,7 +96,7 @@ module T = struct
         loop 0 [@nontail]))
   ;;
 
-  let%template[@inline] compare a b = (compare [@mode local]) a b
+  let%template[@mode __ = (local, global)] [@inline] compare a b = compare_internal a b
 
   let[@inline] custom_t_of_sexp elt_of_sexp (sexp : Sexp.t) =
     (* Adapted from sexplib0/src/sexp_conv.ml *)
@@ -671,7 +671,7 @@ module T = struct
     exists2_exn_loop t1 t2 ~f (len - 1)
   ;;
 
-  let for_all2_exn t1 t2 ~f =
+  let%template[@mode m = (global, local)] for_all2_exn (t1 @ m) (t2 @ m) ~f =
     let rec for_all2_loop t1 t2 ~f i =
       if i < 0 then true else f (get t1 i) (get t2 i) && for_all2_loop t1 t2 ~f (i - 1)
     in
@@ -680,7 +680,9 @@ module T = struct
     for_all2_loop t1 t2 ~f (len - 1)
   ;;
 
-  let equal equal t1 t2 = length t1 = length t2 && for_all2_exn t1 t2 ~f:equal
+  let%template[@mode m = (global, local)] equal equal (t1 @ m) (t2 @ m) =
+    length t1 = length t2 && (for_all2_exn [@mode m]) t1 t2 ~f:equal
+  ;;
 
   let map_inplace t ~f =
     for i = 0 to length t - 1 do
@@ -954,9 +956,9 @@ module T = struct
       ;;
 
       external unsafe_blit
-        :  src:local_ t
+        :  src:t @ local
         -> src_pos:int
-        -> dst:local_ t
+        -> dst:t @ local
         -> dst_pos:int
         -> len:int
         -> unit
@@ -986,8 +988,13 @@ end = struct
   type nonrec -'perms t = t
   [@@deriving bin_io ~localize, compare ~localize, globalize, sexp]
 
-  let[@zero_alloc] to_array_id t = t
-  let[@zero_alloc] of_array_id t = t
+  let%template[@mode l = (global, local)] [@zero_alloc] to_array_id (t @ l) =
+    t [@exclave_if_local l ~reasons:[ May_return_local ]]
+  ;;
+
+  let%template[@mode l = (global, local)] [@zero_alloc] of_array_id (t @ l) =
+    t [@exclave_if_local l ~reasons:[ May_return_local ]]
+  ;;
 
   let to_sequence_immutable : [> Core.immutable ] t -> float Sequence.t =
     to_sequence_mutable
