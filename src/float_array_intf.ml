@@ -8,10 +8,7 @@ open Core
 
 module type S = sig
   type float_elt
-
-  type t
-  [@@deriving
-    bin_io ~localize, compare ~localize, globalize, sexp ~stackify, sexp_grammar]
+  type t [@@deriving bin_io, compare, globalize, sexp, sexp_grammar]
 
   val custom_sexp_of_t : (float_elt -> Sexp.t) -> t -> Sexp.t
   val custom_t_of_sexp : (Sexp.t -> float_elt) -> Sexp.t -> t
@@ -307,7 +304,7 @@ end
 module type Permissioned = sig
   type float_elt
   type permissionless
-  type -'perms t [@@deriving bin_io ~localize, compare ~localize, globalize, sexp]
+  type -'perms t [@@deriving bin_io, compare, globalize, sexp]
 
   val of_array_id : permissionless -> [< read_write ] t [@@zero_alloc]
   val to_array_id : [> read_write ] t -> permissionless [@@zero_alloc]
@@ -493,11 +490,9 @@ module type Float_array = sig
        optimization (although they may be still be correct for converting to/from
        [float# array])
     *)
-    [%%template:
-    [@@@mode.default l = (global, local)]
 
     val of_array_id : float array -> t
-    val to_array_id : t -> float array]
+    val to_array_id : t -> float array
   end
 
   module Permissioned :

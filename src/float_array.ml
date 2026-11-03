@@ -43,8 +43,7 @@ module T = struct
   include struct
     open Bin_prot.Std
 
-    type t = floatarray
-    [@@deriving bin_io ~localize, globalize, sexp ~stackify, sexp_grammar]
+    type t = floatarray [@@deriving bin_io, globalize, sexp, sexp_grammar]
   end
 
   let empty = make 0 0.0
@@ -54,14 +53,14 @@ module T = struct
     Portability_hacks.magic_uncontended__promise_deeply_immutable empty
   ;;
 
-  let%template[@mode local] compare a b =
+  let compare_internal a b =
     (* Adapted from base/src/ppx_compare_lib.ml *)
     if phys_equal a b
     then 0
     else (
       let len_a = length a in
       let len_b = length b in
-      let ret = compare len_a len_b in
+      let ret = Int.compare len_a len_b in
       if ret <> 0
       then ret
       else (
@@ -77,7 +76,7 @@ module T = struct
         loop 0 [@nontail]))
   ;;
 
-  let%template[@inline] compare a b = (compare [@mode local]) a b
+  let[@inline] compare a b = compare_internal a b
 
   let[@inline] custom_t_of_sexp elt_of_sexp (sexp : Sexp.t) =
     (* Adapted from sexplib0/src/sexp_conv.ml *)
@@ -912,7 +911,7 @@ module T = struct
     | Some tt' -> tt'
   ;;
 
-  include%template Binary_searchable.Make [@mode portable] (struct
+  include Binary_searchable.Make (struct
       type nonrec t = t
       type elt = float
 
@@ -920,7 +919,7 @@ module T = struct
       let length = length
     end)
 
-  include%template Blit.Make [@mode portable] (struct
+  include Blit.Make (struct
       type nonrec t = t
 
       let length = length
@@ -963,8 +962,7 @@ module Permissioned : sig
 end = struct
   include T
 
-  type nonrec -'perms t = t
-  [@@deriving bin_io ~localize, compare ~localize, globalize, sexp]
+  type nonrec -'perms t = t [@@deriving bin_io, compare, globalize, sexp]
 
   let[@zero_alloc] to_array_id t = t
   let[@zero_alloc] of_array_id t = t
@@ -980,12 +978,9 @@ module Via_floatarray_optimization = struct
   external of_array_id : (float array[@local_opt]) -> (t[@local_opt]) = "%identity"
   external to_array_id : (t[@local_opt]) -> (float array[@local_opt]) = "%identity"
 
-  [%%template
-  [@@@mode.default l = (local, global)]
-
   let of_array_id arr =
     if Float_array_config.flat_float_array
-    then of_array_id arr [@exclave_if_local l]
+    then of_array_id arr
     else
       failwith
         "[Float_array.Via_floatarray_optimization.of_array_id] requires the float array \
@@ -994,12 +989,12 @@ module Via_floatarray_optimization = struct
 
   let to_array_id arr =
     if Float_array_config.flat_float_array
-    then to_array_id arr [@exclave_if_local l]
+    then to_array_id arr
     else
       failwith
         "[Float_array.Via_floatarray_optimization.to_array_id] requires the float array \
          optimization"
-  ;;]
+  ;;
 end
 
 module type S = Float_array_intf.S

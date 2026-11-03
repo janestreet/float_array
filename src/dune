@@ -10,4 +10,5 @@
  (name float_array)
  (libraries bin_prot core)
  (preprocess
-  (pps ppx_jane -compare-require-explicit-locality)))
+  (pps ppx_jane -compare-require-explicit-locality))
+ (ocamlopt_flags :standard -O3))

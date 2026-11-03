@@ -16,6 +16,19 @@ module%test [@tags "no-wasm"] Binary_searchable = Test_binary_searchable.Test (s
     end
   end)
 
+module%test [@tags "64-bits-only"] Binary_searchable = Test_binary_searchable.Test (struct
+    include Float_array
+
+    type elt = float
+
+    module For_test = struct
+      let of_array = of_array
+      let big = 420_000.
+      let small = -420_000.
+      let compare = Float.compare
+    end
+  end)
+
 module%test Blit =
   Test_blit.Test
     (struct
@@ -486,26 +499,10 @@ let%test_unit _ =
     ~expect:(0., empty)
 ;;
 
-module%test [@name "create_local length check"] _ = struct
-  (* wasm/javascript/native have different exception messages *)
-
-  let run () = require_does_raise (fun () -> ignore (create_local ~len:(-1) 0.0 : t))
-
-  let%expect_test (_ [@tags "no-js"]) =
-    run ();
-    [%expect {| (Invalid_argument "Float_array.create_local ~len:-1: invalid length") |}]
-  ;;
-
-  let%expect_test ("create_local length check (javascript)" [@tags "js-only", "no-wasm"]) =
-    run ();
-    [%expect {| (Invalid_argument "index out of bounds") |}]
-  ;;
-
-  let%expect_test ("create_local length check (wasm)" [@tags "wasm-only"]) =
-    run ();
-    [%expect {| (Invalid_argument Array.make) |}]
-  ;;
-end
+let%expect_test "create_local length check" =
+  require_does_raise (fun () -> ignore (create_local ~len:(-1) 0.0 : t));
+  [%expect {| (Invalid_argument "Float_array.create_local ~len:-1: invalid length") |}]
+;;
 
 let%test_unit "create_local (safe accesses)" =
   let rec test ~len =
@@ -570,8 +567,8 @@ let%expect_test "sexp_of with stack allocation" =
   let test l =
     let t = of_list l in
     let sexp_reference = [%sexp (l : float list)] in
-    let sexp = [%sexp (t : t)] [@alloc stack] in
-    Expect_test_helpers_core.require ((Sexp.equal [@mode local]) sexp_reference sexp);
+    let sexp = [%sexp (t : t)] in
+    Expect_test_helpers_core.require (Sexp.equal sexp_reference sexp);
     print_s sexp;
     ()
   in
